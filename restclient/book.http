@@ -1,0 +1,47 @@
+### Create a new book
+POST http://localhost:3000/books
+Content-Type: application/json
+
+{
+  "title": "1984",
+  "author": "George Orwell",
+  "availableCopies": 3,
+  "isAvailable": true,
+  "createdAt": "2023-01-01T00:00:00.000Z"
+}
+
+###
+
+### Get all books
+GET http://localhost:3000/books
+
+###
+
+### Get only available books
+GET http://localhost:3000/books?available=true
+
+###
+
+### Get a single book by ID
+GET http://localhost:3000/books
+
+###
+
+### Update a book
+PATCH http://localhost:3000/books
+Content-Type: application/json
+
+{
+  "availableCopies": 10,
+  "title": "Nineteen Eighty-Four"
+}
+
+###
+
+### Soft delete a book (mark unavailable)
+DELETE http://localhost:3000/books
+
+###
+
+### Permanently delete a book
+DELETE http://localhost:3000/books/permanent
