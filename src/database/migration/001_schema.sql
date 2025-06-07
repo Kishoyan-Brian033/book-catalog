@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS books(
 
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 CREATE INDEX IF NOT EXISTS idx_books_author ON books(author);
-CREATE INDEX IF NOT EXISTS idx_books_published_year ON books(published_year;
+CREATE INDEX IF NOT EXISTS idx_books_published_year ON books(published_year);
 CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
 
 
