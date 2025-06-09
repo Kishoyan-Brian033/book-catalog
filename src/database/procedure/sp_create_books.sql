@@ -12,12 +12,9 @@ RETURNS TABLE (
     isbn VARCHAR(13)
 ) AS $$
 BEGIN
-    -- Check if a book with the same title already exists
     IF EXISTS (SELECT 1 FROM books WHERE title = p_title) THEN
         RAISE EXCEPTION 'Book with title "%" already exists', p_title;
     END IF;
-
-    -- Insert the book and return inserted row
     RETURN QUERY
     INSERT INTO books (title, author, published_year, isbn)
     VALUES (p_title, p_author, p_published_year, p_isbn)

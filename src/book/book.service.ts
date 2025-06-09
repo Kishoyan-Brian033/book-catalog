@@ -1,93 +1,171 @@
-import { UpdateBookDto } from './dtos/update-book.dto';
-import { createBookDto } from './dtos/create-boo.dto';
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common';
 import { Book } from './interfaces/book.interface';
+import { createBookDto } from './dtos/create-boo.dto';
+import { UpdateBookDto } from './dtos/update-book.dto';
+import { DatabaseService } from '../database/connection.service';
 
 @Injectable()
 export class BooksService {
-  findAvailable(): Book[] {
-    throw new Error('Method not implemented.');
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async create(data: createBookDto): Promise<Book> {
+    try {
+      const result = await this.databaseService.query(
+        `SELECT * FROM sp_create_book($1, $2, $3, $4)`,
+        [data.title, data.author, data.published_year, data.isbn],
+      );
+
+      if (result.rows.length === 0) {
+        throw new InternalServerErrorException('Failed to create book');
+      }
+
+      return this.mapRowToBook(result.rows[0]);
+    } catch (error: any) {
+      if (error.message?.includes('already exists')) {
+        throw new ConflictException('A book with this ISBN already exists');
+      }
+      throw new InternalServerErrorException('Failed to create book');
+    }
   }
-  private books: Book[] = [
-    {
-      id: 1,
-      title: 'Game of Thrones',
-      author: 'Ned Stark',
-      published_year: 2008,
-      isbn: 1 - 56619 - 909 - 3,
-    },
-  ];
 
-  private nextId = 2;
+  async findAll(): Promise<Book[]> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_get_all_books()',
+      );
 
-  create(data: createBookDto): Book {
-    const existingBook = this.books.find((book) => book.title === data.title);
+      return result.rows.map(this.mapRowToBook);
+    } catch {
+      throw new InternalServerErrorException('Failed to retrieve books');
+    }
+  }
 
-    if (existingBook) {
-      throw new ConflictException(
-        `Book with title ${data.title} already exists`,
+  async findAvailable(): Promise<Book[]> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_get_available_books()',
+      );
+      return result.rows.map(this.mapRowToBook);
+    } catch {
+      throw new InternalServerErrorException(
+        'Failed to retrieve available books',
       );
     }
-
-    const newBook: Book = {
-      id: this.nextId++,
-      ...data,
-    };
-
-    this.books.push(newBook);
-    return newBook;
   }
 
-  findAll(): Book[] {
-    return this.books;
-  }
+  async findOne(id: number): Promise<Book> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_get_book_by_id($1)',
+        [id],
+      );
 
-  findOne(id: number): Book {
-    const book = this.books.find((book) => book.id === id);
-    if (!book) {
-      throw new ConflictException(`Book with ID ${id} not found`);
+      if (result.rows.length === 0) {
+        throw new NotFoundException(`Book with ID ${id} not found`);
+      }
+
+      return this.mapRowToBook(result.rows[0]);
+    } catch {
+      throw new InternalServerErrorException('Failed to retrieve book');
     }
-    return book;
   }
 
-  update(id: number, updateData: UpdateBookDto): Book {
-    const bookIndex = this.books.findIndex((book) => book.id === id);
-    if (bookIndex === -1) {
-      throw new ConflictException(`Book with ID ${id} not found`);
+  async findByIsbn(isbn: string): Promise<Book> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_get_book_by_isbn($1)',
+        [isbn],
+      );
+
+      if (result.rows.length === 0) {
+        throw new NotFoundException(`Book with ISBN ${isbn} not found`);
+      }
+
+      return this.mapRowToBook(result.rows[0]);
+    } catch {
+      throw new InternalServerErrorException('Failed to retrieve book');
     }
-
-    this.books[bookIndex] = {
-      ...this.books[bookIndex],
-      ...updateData,
-    };
-
-    return this.books[bookIndex];
   }
 
-  remove(id: number): { message: string } {
-    const bookIndex = this.books.findIndex((book) => book.id === id);
-    if (bookIndex === 1) {
-      throw new NotFoundException(`Book with id ${id} not found`);
-    }
+  async update(id: number, data: UpdateBookDto): Promise<Book> {
+    try {
+      const result = await this.databaseService.query(
+        `SELECT * FROM sp_update_book($1, $2, $3, $4)`,
+        [
+          data.title || null,
+          data.author || null,
+          data.published_year || null,
+          data.isbn || null,
+        ],
+      );
 
+      if (result.rows.length === 0) {
+        throw new NotFoundException(`Book with ID ${id} not found`);
+      }
+
+      return this.mapRowToBook(result.rows[0]);
+    } catch (error: any) {
+      if (error.message?.includes('not found')) {
+        throw new NotFoundException(`Book with ID ${id} not found`);
+      }
+      if (error.message?.includes('ISBN already exists')) {
+        throw new ConflictException('Another book with this ISBN exists');
+      }
+      throw new InternalServerErrorException('Failed to update book');
+    }
+  }
+
+  async remove(id: number): Promise<{ message: string }> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_soft_delete_book($1)',
+        [id],
+      );
+
+      if (result.rows.length === 0) {
+        throw new NotFoundException(`Book with ID ${id} not found`);
+      }
+
+      return { message: result.rows[0].message };
+    } catch {
+      throw new InternalServerErrorException('Failed to soft delete book');
+    }
+  }
+
+  async delete(id: number): Promise<{ message: string }> {
+    try {
+      const result = await this.databaseService.query(
+        'SELECT * FROM sp_hard_delete_book($1)',
+        [id],
+      );
+
+      if (result.rows.length === 0) {
+        throw new NotFoundException(`Book with ID ${id} not found`);
+      }
+
+      return { message: result.rows[0].message };
+    } catch {
+      throw new InternalServerErrorException('Failed to delete book');
+    }
+  }
+
+  private mapRowToBook(row: any): Book {
     return {
-      message: `Guest  ${this.books[bookIndex].title} has checked out succesfully`,
-    };
-  }
-
-  delete(id: number): { message: string } {
-    const bookIndex = this.books.findIndex((book) => book.id === id);
-    if (bookIndex === -1) {
-      throw new NotFoundException(`Book with ID ${id} not found`);
-    }
-    const deletedBook = this.books.splice(bookIndex, 1)[0];
-
-    return {
-      message: `Book ${deletedBook.title} has been permanently deleted`,
+      id: row.id,
+      title: row.title,
+      author: row.author,
+      published_year: row.published_year,
+      isbn: row.isbn,
     };
   }
 }

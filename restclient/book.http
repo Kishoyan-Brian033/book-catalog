@@ -2,13 +2,15 @@
 POST http://localhost:3000/books
 Content-Type: application/json
 
+
 {
-  "title": "1984",
-  "author": "George Orwell",
-  "availableCopies": 3,
-  "isAvailable": true,
-  "createdAt": "2023-01-01T00:00:00.000Z"
+  "title": "Power Book IV: Force",
+  "author": "Robert Munic",
+  "published_year": 2022,
+  "isbn": 1234567890123
 }
+
+
 
 ###
 
@@ -23,7 +25,7 @@ GET http://localhost:3000/books?available=true
 ###
 
 ### Get a single book by ID
-GET http://localhost:3000/books
+GET http://localhost:3000/books/1
 
 ###
 
@@ -32,16 +34,16 @@ PATCH http://localhost:3000/books
 Content-Type: application/json
 
 {
-  "availableCopies": 10,
-  "title": "Nineteen Eighty-Four"
+  "availableCopies": 9,
+  "title": "Power Book II: Rariq"
 }
 
 ###
 
 ### Soft delete a book (mark unavailable)
-DELETE http://localhost:3000/books
+DELETE http://localhost:3000/books/
 
 ###
 
 ### Permanently delete a book
-DELETE http://localhost:3000/books/permanent
+DELETE http://localhost:3000/books/1

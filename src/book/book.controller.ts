@@ -9,10 +9,9 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
 } from '@nestjs/common';
 import { BooksService } from './book.service';
-import { createBookDto } from '../book/dtos/create-boo.dto';
+import { createBookDto } from './dtos/create-boo.dto';
 import { UpdateBookDto } from './dtos/update-book.dto';
 import { ApiResponse } from 'src/shared/interfaces/api-response/api-response.interface';
 import { Book } from './interfaces/book.interface';
@@ -23,9 +22,9 @@ export class BooksController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() data: createBookDto): ApiResponse<Book> {
+  async create(@Body() data: createBookDto): Promise<ApiResponse<Book>> {
     try {
-      const book = this.booksService.create(data);
+      const book = await this.booksService.create(data);
       return {
         success: true,
         message: 'Book created successfully',
@@ -41,13 +40,9 @@ export class BooksController {
   }
 
   @Get()
-  findAll(@Query('available') available?: string): ApiResponse<Book[]> {
+  async findAll(): Promise<ApiResponse<Book[]>> {
     try {
-      const books =
-        available === 'true'
-          ? this.booksService.findAvailable()
-          : this.booksService.findAll();
-
+      const books = await this.booksService.findAll();
       return {
         success: true,
         message: `Retrieved ${books.length} book(s)`,
@@ -63,9 +58,11 @@ export class BooksController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): ApiResponse<Book> {
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ApiResponse<Book>> {
     try {
-      const book = this.booksService.findOne(id);
+      const book = await this.booksService.findOne(id);
       return {
         success: true,
         message: 'Book found',
@@ -81,16 +78,16 @@ export class BooksController {
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateBookDto,
-  ): ApiResponse<Book> {
+  ): Promise<ApiResponse<Book>> {
     try {
-      const updated = this.booksService.update(id, data);
+      const updatedBook = await this.booksService.update(id, data);
       return {
         success: true,
         message: 'Book updated successfully',
-        data: updated,
+        data: updatedBook,
       };
     } catch (error) {
       return {
@@ -102,9 +99,11 @@ export class BooksController {
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number): ApiResponse<null> {
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ApiResponse<null>> {
     try {
-      const result = this.booksService.remove(id);
+      const result = await this.booksService.remove(id);
       return {
         success: true,
         message: result.message,
@@ -119,9 +118,11 @@ export class BooksController {
   }
 
   @Delete(':id/permanent')
-  delete(@Param('id', ParseIntPipe) id: number): ApiResponse<null> {
+  async delete(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ApiResponse<null>> {
     try {
-      const result = this.booksService.delete(id);
+      const result = await this.booksService.delete(id);
       return {
         success: true,
         message: result.message,
